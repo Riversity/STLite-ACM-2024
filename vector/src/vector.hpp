@@ -12,20 +12,17 @@ namespace sjtu
  * a data container like std::vector
  * store data in a successive memory and support random access.
  */
+auto resize_func = [](size_t s){return s / 2 * 3 + 1;};
 template<typename T>
 class vector 
 {
+private:
+	size_t size, capacity;
+	T* data;
+
 public:
-	/**
-	 * TODO
-	 * a type for actions of the elements of a vector, and you should write
-	 *   a class named const_iterator with same interfaces.
-	 */
-	/**
-	 * you can see RandomAccessIterator at CppReference for help.
-	 */
 	class const_iterator;
-	class iterator 
+	class iterator
 	{
 	// The following code is written for the C++ type_traits library.
 	// Type traits is a C++ feature for describing certain properties of a type.
@@ -46,49 +43,57 @@ public:
 		using iterator_category = std::output_iterator_tag;
 
 	private:
-		/**
-		 * TODO add data members
-		 *   just add whatever you want.
-		 */
+		vector* origin;
+		int pos;
 	public:
+		iterator(vector* _origin = nullptr, int _pos = 0)
+						: origin(_origin), pos(_pos) {}
+		~iterator() = default;
+		iterator(iterator &other) {
+			origin = other.origin;
+			pos = other.pos;
+		}
 		/**
 		 * return a new iterator which pointer n-next elements
 		 * as well as operator-
 		 */
 		iterator operator+(const int &n) const 
 		{
-			//TODO
+			return iterator(origin, pos + n);
 		}
 		iterator operator-(const int &n) const 
 		{
-			//TODO
+			return iterator(origin, pos - n);
 		}
 		// return the distance between two iterators,
 		// if these two iterators point to different vectors, throw invaild_iterator.
 		int operator-(const iterator &rhs) const 
 		{
-			//TODO
+			if(origin != rhs.origin) throw invalid_iterator();
+			else return pos - rhs.pos;
 		}
 		iterator& operator+=(const int &n) 
 		{
-			//TODO
+			pos += n;
+			return *this;
 		}
 		iterator& operator-=(const int &n) 
 		{
-			//TODO
+			pos -= n;
+			return *this;
 		}
-		/**
-		 * TODO iter++
-		 */
-		iterator operator++(int) {}
-		/**
-		 * TODO ++iter
-		 */
-		iterator& operator++() {}
-		/**
-		 * TODO iter--
-		 */
-		iterator operator--(int) {}
+		iterator operator++(int) {
+			iterator tmp(origin, pos + 1);
+			return tmp;
+		}
+		iterator& operator++() {
+			++pos;
+			return *this;
+		}
+		iterator operator--(int) {
+			iterator tmp(origin, pos - 1);
+			return tmp;
+		}
 		/**
 		 * TODO --iter
 		 */
@@ -96,7 +101,9 @@ public:
 		/**
 		 * TODO *it
 		 */
-		T& operator*() const{}
+		T& operator*() const{
+			return origin->data[pos];
+		}
 		/**
 		 * a operator to check whether two iterators are same (pointing to the same memory address).
 		 */
@@ -143,6 +150,7 @@ public:
 	 * assigns specified element with bounds checking
 	 * throw index_out_of_bound if pos is not in [0, size)
 	 */
+	void expand() {} // Move the whole chunk to a bigger residence
 	T & at(const size_t &pos) {}
 	const T & at(const size_t &pos) const {}
 	/**
