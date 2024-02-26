@@ -17,7 +17,7 @@ template<typename T>
 class vector 
 {
 private:
-	size_t size, capacity;
+	size_t siz, capacity;
 	T* data;
 
 public:
@@ -47,7 +47,7 @@ public:
 		int pos;
 	public:
 		iterator(vector* _origin = nullptr, int _pos = 0)
-						: origin(_origin), pos(_pos) {}
+						: origin (_origin), pos (_pos) {}
 		~iterator() = default;
 		iterator(iterator &other) {
 			origin = other.origin;
@@ -83,7 +83,8 @@ public:
 			return *this;
 		}
 		iterator operator++(int) {
-			iterator tmp(origin, pos + 1);
+			iterator tmp(*this);
+			++pos;
 			return tmp;
 		}
 		iterator& operator++() {
@@ -91,13 +92,14 @@ public:
 			return *this;
 		}
 		iterator operator--(int) {
-			iterator tmp(origin, pos - 1);
+			iterator tmp(*this);
+			--pos;
 			return tmp;
 		}
-		/**
-		 * TODO --iter
-		 */
-		iterator& operator--() {}
+		iterator& operator--() {
+			--pos;
+			return *this;
+		}
 		/**
 		 * TODO *it
 		 */
@@ -107,18 +109,23 @@ public:
 		/**
 		 * a operator to check whether two iterators are same (pointing to the same memory address).
 		 */
-		bool operator==(const iterator &rhs) const {}
-		bool operator==(const const_iterator &rhs) const {}
+		bool operator==(const iterator &rhs) const {
+			return (origin == rhs.origin) && (pos == rhs.pos);
+		}
+		bool operator==(const const_iterator &rhs) const {
+			return (origin == rhs.origin) && (pos == rhs.pos);
+		}
 		/**
 		 * some other operator for iterator.
 		 */
-		bool operator!=(const iterator &rhs) const {}
-		bool operator!=(const const_iterator &rhs) const {}
+		bool operator!=(const iterator &rhs) const {
+			return !(*this == rhs);
+		}
+		bool operator!=(const const_iterator &rhs) const {
+			return !(*this == rhs);
+		}
 	};
-	/**
-	 * TODO
-	 * has same function as iterator, just for a const object.
-	 */
+
 	class const_iterator 
 	{
 	public:
@@ -127,40 +134,131 @@ public:
 		using pointer = T*;
 		using reference = T&;
 		using iterator_category = std::output_iterator_tag;
-	
-	private:
-		/*TODO*/
 
+	private:
+		vector* origin;
+		int pos;
+
+	public:
+		const_iterator(vector* _origin = nullptr, int _pos = 0)
+						: origin(_origin), pos(_pos) {}
+		~const_iterator() = default;
+		const_iterator(const_iterator &other) {
+			origin = other.origin;
+			pos = other.pos;
+		}
+		const_iterator operator+(const int &n) const 
+		{
+			return const_iterator(origin, pos + n);
+		}
+		const_iterator operator-(const int &n) const 
+		{
+			return const_iterator(origin, pos - n);
+		}
+		int operator-(const const_iterator &rhs) const 
+		{
+			if(origin != rhs.origin) throw invalid_iterator();
+			else return pos - rhs.pos;
+		}
+		const_iterator& operator+=(const int &n) 
+		{
+			pos += n;
+			return *this;
+		}
+		const_iterator& operator-=(const int &n) 
+		{
+			pos -= n;
+			return *this;
+		}
+		const_iterator operator++(int) {
+			const_iterator tmp(*this);
+			++pos;
+			return tmp;
+		}
+		const_iterator& operator++() {
+			++pos;
+			return *this;
+		}
+		const_iterator operator--(int) {
+			const_iterator tmp(*this);
+			--pos;
+			return tmp;
+		}
+		const_iterator& operator--() {
+			--pos;
+			return *this;
+		}
+		const T &operator*() const {
+      return *(data + pos);
+    }
+		bool operator==(const const_iterator &rhs) const {
+			return (origin == rhs.origin) && (pos == rhs.pos);
+		}
+		bool operator==(const iterator &rhs) const {
+			return (origin == rhs.origin) && (pos == rhs.pos);
+		}
+		bool operator!=(const const_iterator &rhs) const {
+			return !(*this == rhs);
+		}
+		bool operator!=(const iterator &rhs) const {
+			return !(*this == rhs);
+		}
 	};
 	/**
 	 * TODO Constructs
 	 * At least two: default constructor, copy constructor
 	 */
-	vector() {}
-	vector(const vector &other) {}
+	vector() : capacity(16), size(0){
+		data = (T*) malloc(capacity * sizeof(T));
+	}
+	vector(const vector &other) : capacity(other.siz), siz(other.siz) {
+		data = (T*) malloc(capacity * sizeof(T));
+    for (int i = 0; i < siz; ++i) {
+      new(data + i) T(other[i]); // Placement new
+    }
+	}
 	/**
 	 * TODO Destructor
 	 */
-	~vector() {}
+  ~vector() {
+    for (int i = 0; i < siz; ++i) {
+      data[i].~T();
+    }
+    free(data);
+  }
 	/**
 	 * TODO Assignment operator
 	 */
-	vector &operator=(const vector &other) {}
-	/**
-	 * assigns specified element with bounds checking
-	 * throw index_out_of_bound if pos is not in [0, size)
-	 */
-	void expand() {} // Move the whole chunk to a bigger residence
+	vector &operator=(const vector &other) {
+		if(this != &other) {
+			
+			capacity = other.capacity, siz = other.siz;
+    	data = (T*) malloc(capacity * sizeof(T));
+    	for(int i = 0; i < siz; ++i) {
+      	new(data + i) T(other[i]);
+    	}
+		}
+    return *this;
+	}
+	// Move the whole chunk to a bigger residence
+	void expand() {
+		T* n_data = (T*) malloc(resize_func(capacity) * sizeof(T));
+
+	}
 	T & at(const size_t &pos) {}
 	const T & at(const size_t &pos) const {}
 	/**
 	 * assigns specified element with bounds checking
 	 * throw index_out_of_bound if pos is not in [0, size)
-	 * !!! Pay attentions
+	 * !!! Pay attention
 	 *   In STL this operator does not check the boundary but I want you to do.
 	 */
-	T & operator[](const size_t &pos) {}
-	const T & operator[](const size_t &pos) const {}
+	T & operator[](const size_t &pos) {
+		return at(pos);
+	}
+	const T & operator[](const size_t &pos) const {
+		return at(pos);
+	}
 	/**
 	 * access the first element.
 	 * throw container_is_empty if size == 0
@@ -184,15 +282,22 @@ public:
 	/**
 	 * checks whether the container is empty
 	 */
-	bool empty() const {}
+	bool empty() const {
+		return siz == 0;
+	}
 	/**
 	 * returns the number of elements
 	 */
-	size_t size() const {}
-	/**
-	 * clears the contents
-	 */
-	void clear() {}
+	size_t size() const {
+		return siz;
+	}
+	void clear() {
+		for(size_t i = 0; i < siz; ++i) {
+			(data + i)->~T();
+		}
+		siz = 0; capacity = 16;
+		data = (T*) malloc(capacity * sizeof(T));
+	}
 	/**
 	 * inserts value before pos
 	 * returns an iterator pointing to the inserted value.
@@ -220,7 +325,9 @@ public:
 	/**
 	 * adds an element to the end.
 	 */
-	void push_back(const T &value) {}
+	void push_back(const T &value) {
+
+	}
 	/**
 	 * remove the last element from the end.
 	 * throw container_is_empty if size() == 0
