@@ -6,15 +6,15 @@
 #include <climits>
 #include <cstddef>
 
-namespace sjtu 
+namespace sjtu
 {
 /**
  * a data container like std::vector
  * store data in a successive memory and support random access.
  */
-auto resize_func = [](size_t s){return s / 2 * 3 + 1;};
+auto resize_func = [] (size_t s) { return s / 2 * 3 + 1; };
 template<typename T>
-class vector 
+class vector
 {
 private:
   size_t siz, capacity;
@@ -32,10 +32,6 @@ public:
   // STL algorithms and containers may use these type_traits (e.g. the following 
   // typedef) to work properly. In particular, without the following code, 
   // @code{std::sort(iter, iter1);} would not compile.
-  // See these websites for more information:
-  // https://en.cppreference.com/w/cpp/header/type_traits
-  // About value_type: https://blog.csdn.net/u014299153/article/details/72419713
-  // About iterator_category: https://en.cppreference.com/w/cpp/iterator
   public:
     using difference_type = std::ptrdiff_t;
     using value_type = T;
@@ -101,9 +97,6 @@ public:
       --pos;
       return *this;
     }
-    /**
-     * TODO *it
-     */
     T& operator*() const{
       return origin->data[pos];
     }
@@ -207,10 +200,7 @@ public:
       return !(*this == rhs);
     }
   };
-  /**
-   * TODO Constructs
-   * At least two: default constructor, copy constructor
-   */
+
   vector() : capacity(16), siz(0){
     data = (T*) malloc(capacity * sizeof(T));
   }
@@ -220,15 +210,17 @@ public:
       new(data + i) T(other[i]); // Placement new
     }
   }
-  /**
-   * TODO Destructor
-   */
+
   ~vector() {
     destroy();
   }
-  /**
-   * TODO Assignment operator
-   */
+  void destroy() {
+    for(int i = 0; i < siz; ++i) {
+      data[i].~T();
+    }
+    free(data);
+  }
+
   vector &operator=(const vector &other) {
     if(this != &other) {
       destroy();
@@ -240,14 +232,7 @@ public:
     }
     return *this;
   }
-  //
-  void destroy() {
-    for(int i = 0; i < siz; ++i) {
-      data[i].~T();
-    }
-    free(data);
-  }
-  // Move the whole chunk to a bigger residence
+  // Move the whole chunk to a bigger space
   void expand() {
     capacity = resize_func(capacity); // siz maintained
     T* n_data = (T*) malloc(capacity * sizeof(T));
@@ -257,6 +242,7 @@ public:
     destroy();
     data = n_data;
   }
+
   T & at(const size_t &pos) {
     if(pos < 0 || pos >= siz) {
       throw index_out_of_bound();
@@ -401,7 +387,6 @@ public:
     --siz;
   }
 };
-
 }
 
 #endif
