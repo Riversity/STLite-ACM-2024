@@ -63,12 +63,11 @@ public:
   }
 
   void push(const T &e) {
-    //cmp(*root->content, e);
     node *add = new node(e);
     try {
       root = fuse(root, add);
     }
-    catch(...) {
+    catch(...) { // Avoid memleak lest the comparison failed
       delete add;
       throw;
     }
@@ -126,9 +125,9 @@ private:
     delete p;
     return;
   }
-  /*
-    fuse invalidate original relations.
-  */
+  /**
+   * fuse invalidate original relations.
+   */
   node* fuse(node* x, node* y) {
     if(!x) return y;
     if(!y) return x;

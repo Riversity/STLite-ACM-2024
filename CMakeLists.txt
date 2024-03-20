@@ -3,6 +3,9 @@ project(priority_queue_one)
 
 set(CMAKE_CXX_STANDARD 20)
 
+include_directories(priority_queue
+                    priority_queue/src)
+
 add_executable(pq
         priority_queue/src/exceptions.hpp
         priority_queue/src/utility.hpp
