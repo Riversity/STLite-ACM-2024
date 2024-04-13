@@ -21,7 +21,7 @@ template<
 public:
   typedef pair<const Key, T> value_type;
   class iterator;
-  using const_iterator = iterator;
+  class const_iterator;
   class node {
   public:
     value_type* data;
@@ -41,16 +41,16 @@ public:
     }
     ~node() {
       if(data) {
-        data->first.~Key();
-        data->second.~T();
-        delete data;  
+        //data->first.~Key();
+        //data->second.~T();
+        delete data;
       }
     }
   };
 
 private:
-  size_t siz;
-  node* root;
+  size_t siz = 0;
+  node* root = nullptr;
   void destroy(node* t) {
     if(!t) return;
     destroy(t->left);
@@ -61,7 +61,6 @@ private:
   void copy(node* other, node* &new_node, node* parent) {
     if(!other) { new_node = nullptr; return; }
     new_node = new node(*(other->data), nullptr, nullptr, parent, other->height);
-    ++siz;
     copy(other->left, new_node->left, new_node);
     copy(other->right, new_node->right, new_node);
     return;
@@ -169,7 +168,129 @@ private:
     return ret;
   }
 
-  node* next(node* t) {
+  bool adjust(node* &t, bool is_left) {
+    if(is_left) {
+      if(hei(t->right) - hei(t->left) == 1) {
+        return true;
+      }
+      if(hei(t->left) == hei(t->right)) {
+        --t->height;
+        return false;
+      }
+      if(hei(t->right->left) < hei(t->right->right)) {
+        RR(t);
+        return false;
+      }
+      else if(hei(t->right->left) == hei(t->right->right)) {
+        RR(t);
+        return true;
+      }
+      else {
+        RL(t);
+        return false;
+      }
+    }
+    else {
+      if(hei(t->left) - hei(t->right) == 1) {
+        return true;
+      }
+      if(hei(t->left) == hei(t->right)) {
+        --t->height;
+        return false;
+      }
+      if(hei(t->left->left) < hei(t->left->right)) {
+        LR(t);
+        return false;
+      }
+      else if(hei(t->left->left) == hei(t->left->right)) {
+        LL(t);
+        return true;
+      }
+      else {
+        LL(t);
+        return false;
+      }
+    }
+  }
+  bool remove(const Key &k, node* &t) {
+    // the return value means whether adjusting is unnecessary
+    if(!t) return true;
+    if(!Compare()(k, t->data->first) && !Compare()(t->data->first, k)) {
+      if(!t->left || !t->right) {
+        node* old = t;
+        if(!t->left && !t->right) {
+          t = nullptr;
+        }
+        else if(t->right) { // left is nullptr
+          t->right->parent = t->parent;
+          t = t->right;
+        }
+        else {
+          t->left->parent = t->parent;
+          t = t->left;
+        }
+        delete old;
+        return false;
+      }
+      else {
+        node* sub = last(t->left);
+        node* t_r = t->right;
+        node* t_l = t->left;
+        if(sub == t->left) {
+          // note: to ensure validity of iter, cannot directly swap data
+          sub->parent = t->parent;
+          t->parent = sub;
+          t->right = sub->right;
+          if(sub->right) sub->right->parent = t;
+          t->left = sub->left;
+          if(sub->left) sub->left->parent = t;
+          sub->left = t;
+          sub->right = t_r;
+          if(t_r) t_r->parent = sub;
+        }
+        else {
+          node* t_p = t->parent;
+          t->parent = sub->parent;
+          sub->parent = t_p;
+          t->parent->right = t;
+
+          t->right = sub->right;
+          if(sub->right) sub->right->parent = t;
+          sub->right = t_r;
+          if(t_r) t_r->parent = sub;
+
+          t->left = sub->left;
+          if(sub->left) sub->left->parent = t;
+          sub->left = t_l;
+          if(t_l) t_l->parent = sub;
+        }
+        //node* tmp = t;
+        //t = sub;
+        //sub = tmp;
+        t->data->first.~Key();
+        t->data->second.~T();
+        new (t->data) value_type(*(sub->data)); 
+        int h = t->height;
+        t->height = sub->height;
+        sub->height = h;
+        t = sub;
+        if(remove(sub->data->first, t->left)) return true;
+        else return adjust(t, true);
+      }
+    }
+    else {
+      if(Compare()(k, t->data->first)) {
+        if(remove(k, t->left)) return true;
+        else return adjust(t, true);
+      }
+      else {
+        if(remove(k, t->right)) return true;
+        else return adjust(t, false);
+      }
+    }
+  }
+
+  node* next(node* t) const {
     // if(!t) return nullptr;
     node* ret = t;
     if(t->right) { // have right child, find leftest node on right branch
@@ -183,7 +304,7 @@ private:
     if(!ret->parent) return nullptr; // largest already
     return ret->parent;
   }
-  node* prev(node* t) {
+  node* prev(node* t) const {
     node* ret = t;
     if(t->left) {
       ret = t->left;
@@ -196,12 +317,12 @@ private:
     if(!ret->parent) return nullptr;
     return ret->parent;
   }
-  node* first(node* t) {
+  node* first(node* t) const {
     if(!t) return t;
     while(t->left) t = t->left;
     return t; 
   }
-  node* last(node* t) { // note that last(root) is not end()
+  node* last(node* t) const { // note that last(root) is not end()
     if(!t) return t;
     while(t->right) t = t->right;
     return t;
@@ -214,12 +335,13 @@ public:
   }
   map(const map &other) {
     copy(other.root, root, nullptr);
-    //assert(other.siz == siz);
+    siz = other.siz;
   }
   map & operator=(const map &other) {
     if(this == &other) return *this;
     destroy(root);
     copy(other.root, root, nullptr);
+    siz = other.siz;
     return *this;
   }
   ~map() {
@@ -272,15 +394,14 @@ public:
   iterator begin() {
     return iterator(this, first(root));
   }
-  // const_iterator cbegin() const {}
-  const_iterator cbegin() {
+  const_iterator cbegin() const {
     return const_iterator(this, first(root));
   }
 
   iterator end() {
     return iterator(this, nullptr);
   }
-  const_iterator cend() {
+  const_iterator cend() const {
     return const_iterator(this, nullptr);
   }
   bool empty() const {
@@ -317,7 +438,9 @@ public:
    * throw if pos pointed to a bad element (pos == this->end() || pos points an element out of this)
    */
   void erase(iterator pos) {
-    /////////////////////////////////////////
+    if(pos.src != this || pos.obj == nullptr) throw invalid_iterator();
+    remove(pos->first, root);
+    --siz;
   }
 
   size_t count(const Key &key) const {
@@ -335,7 +458,10 @@ public:
     node* res = fin(key, root);
     return iterator(this, res);
   }
-  // const_iterator find(const Key &key) const {}
+  const_iterator find(const Key &key) const {
+    node* res = fin(key, root);
+    return const_iterator(this, res);
+  }
 
   /**
    * see BidirectionalIterator at CppReference for help.
@@ -344,7 +470,7 @@ public:
    *     like it = map.begin(); --it;
    *       or it = map.end(); ++end();
    */
-  //class const_iterator;
+
   class iterator {
     friend class map;
   private:
@@ -361,26 +487,18 @@ public:
       src = other.src;
       obj = other.obj;
     }
-    /**
-     * TODO iter++
-     */
+
     iterator operator++(int) {
       if(!obj || !src) throw invalid_iterator();
       iterator ret(*this);
       obj = src->next(obj);
       return ret;
     }
-    /**
-     * TODO ++iter
-     */
     iterator & operator++() {
       if(!obj || !src) throw invalid_iterator();
       obj = src->next(obj);
       return *this;
     }
-    /**
-     * TODO iter--
-     */
     iterator operator--(int) {
       if(!src) throw invalid_iterator();
       iterator ret(*this);
@@ -389,9 +507,6 @@ public:
       if(!obj) throw invalid_iterator();
       return ret;
     }
-    /**
-     * TODO --iter
-     */
     iterator & operator--() {
       if(!src) throw invalid_iterator();
       if(!obj) obj = src->last(src->root);
@@ -407,40 +522,93 @@ public:
     bool operator==(const iterator &rhs) const {
       return src == rhs.src && obj == rhs.obj;
     }
-    //bool operator==(const const_iterator &rhs) const {}
+    bool operator==(const const_iterator &rhs) const {
+      return src == rhs.src && obj == rhs.obj;
+    }
     bool operator!=(const iterator &rhs) const {
       return src != rhs.src || obj != rhs.obj;
     }
-    //bool operator!=(const const_iterator &rhs) const {}
+    bool operator!=(const const_iterator &rhs) const {
+      return src != rhs.src || obj != rhs.obj;
+    }
 
-    value_type* operator->() const noexcept {
+    value_type* operator->() const {
       if(!obj) throw invalid_iterator();
       return obj->data;
     }
   };
 
-  /*
   class const_iterator {
-    // it should has similar member method as iterator.
-    //  and it should be able to construct from an iterator.
-    private:
-      // data members.
-    public:
-      const_iterator() {
-        // TODO
-      }
-      const_iterator(const const_iterator &other) {
-        // TODO
-      }
-      const_iterator(const iterator &other) {
-        // TODO
-      }
-      // And other methods in iterator.
-      // And other methods in iterator.
-      // And other methods in iterator.
+   friend class map;
+  private:
+      const map* src;
+      node* obj;
+  public:
+    const_iterator() {
+      src = nullptr;
+      obj = nullptr;
+    }
+    const_iterator(const map* src, node* obj) : src(src), obj(obj) {}
+    //const_iterator(map* src, node* obj) : src(src), obj(obj) {}
+    const_iterator(const const_iterator &other) {
+      src = other.src;
+      obj = other.obj;
+    }
+    const_iterator(const iterator &other) {
+      src = other.src;
+      obj = other.obj;
+    }
+
+    const_iterator operator++(int) {
+      if(!obj || !src) throw invalid_iterator();
+      const_iterator ret(*this);
+      obj = src->next(obj);
+      return ret;
+    }
+    const_iterator & operator++() {
+      if(!obj || !src) throw invalid_iterator();
+      obj = src->next(obj);
+      return *this;
+    }
+    const_iterator operator--(int) {
+      if(!src) throw invalid_iterator();
+      const_iterator ret(*this);
+      if(!obj) obj = src->last(src->root);
+      else obj = src->prev(obj);
+      if(!obj) throw invalid_iterator();
+      return ret;
+    }
+    const_iterator & operator--() {
+      if(!src) throw invalid_iterator();
+      if(!obj) obj = src->last(src->root);
+      else obj = src->prev(obj);
+      if(!obj) throw invalid_iterator();
+      return *this;
+    }
+
+    value_type & operator*() const {
+      if(!obj) throw invalid_iterator();
+      return *(obj->data);
+    }
+    bool operator==(const iterator &rhs) const {
+      return src == rhs.src && obj == rhs.obj;
+    }
+    bool operator==(const const_iterator &rhs) const {
+      return src == rhs.src && obj == rhs.obj;
+    }
+    bool operator!=(const iterator &rhs) const {
+      return src != rhs.src || obj != rhs.obj;
+    }
+    bool operator!=(const const_iterator &rhs) const {
+      return src != rhs.src || obj != rhs.obj;
+    }
+
+    value_type* operator->() const {
+      if(!obj) throw invalid_iterator();
+      return obj->data;
+    }
   };
 
-  */
 };
 
 }
