@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(priority_queue_one)
+project(map_one)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(priority_queue
-                    priority_queue/src)
+include_directories(map
+                    map/src)
 
-add_executable(pq
-        priority_queue/src/exceptions.hpp
-        priority_queue/src/utility.hpp
-        priority_queue/src/priority_queue.hpp
-        priority_queue/data/one/code.cpp)
+add_executable(map_one
+        map/src/exceptions.hpp
+        map/src/utility.hpp
+        map/src/map.hpp
+        map/data/one/code.cpp)
